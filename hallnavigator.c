@@ -168,7 +168,7 @@ int main(int argc, const char **argv) {
 #endif
     //Rotate the Servo
     turret_SetServo(hands->t, T_ANGLE);
-    
+
     for(i=0; i<FILT_IR_SAMPLES; i++) {
         filterIR(hands, filt, &t, &t);
 #ifndef USE_IR_MODE
@@ -181,9 +181,6 @@ int main(int argc, const char **argv) {
 #ifdef DEBUG
         printf("Waypoint %d (%f,%f).\n",i+1,waypoints[i].X,waypoints[i].Y);
 #endif
-        //if(i > 0) {
-        //    Turn(hands,filt,pids,waypoints[i].X,waypoints[i].Y);
-        //}
         Move(hands,filt,pids,waypoints[i].X,waypoints[i].Y);
 #ifdef DEBUG
         printf("\nArrived at waypoint %d (%f,%f).\n\n", i+1,waypoints[i].X,waypoints[i].Y);

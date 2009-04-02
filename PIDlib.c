@@ -359,7 +359,7 @@ void correctAngleErr(api_HANDLES_t * dev, FilterHandles_t * filter, double walls
         if(val < min) {
             min = val;
         }
-        printf("prev: %f val: %f min: %f vA: %f\n",prev,val,min,vA); 
+        printf("prev: %f val: %f min: %f vA: %f\n",prev,val,min,vA);
     } while(val <= prev);
     vA *= -0.75; //Slow down and change direction
     create_set_speeds(dev->c, 0.0, vA);
@@ -372,11 +372,11 @@ void correctAngleErr(api_HANDLES_t * dev, FilterHandles_t * filter, double walls
         if(val < min) {
             min = val;
         }
-        printf("prev: %f val: %f min: %f vA: %f\n",prev,val,min,vA); 
+        printf("prev: %f val: %f min: %f vA: %f\n",prev,val,min,vA);
     } while(val <= prev);
     //create_set_speeds(dev->c, 0.0, 0.0);
     printf("Est min: %f\n", min);
-    
+
     vA *= -0.95; //Slow down and change direction
     create_set_speeds(dev->c, 0.0, vA);
     while((err = (val-min)) > tol) {
@@ -391,10 +391,10 @@ void correctAngleErr(api_HANDLES_t * dev, FilterHandles_t * filter, double walls
             create_set_speeds(dev->c, 0.0, vA);
             printf("Change direction!\n");
         }
-        printf("prev: %f val: %f min: %f vA: %f\n",prev,val,min,vA); 
+        printf("prev: %f val: %f min: %f vA: %f\n",prev,val,min,vA);
     }
     printf("I think I am oriented at dist: %f\n", val);
-    
+
     //Set the corrected angle
     oa = h;
 }
@@ -504,85 +504,6 @@ double Move(api_HANDLES_t * dev, FilterHandles_t * filter, pidHandles_t * pids, 
         filterSonar(dev, filter, &wallL, &wallR);
 #endif
         if(fabs(tError) <= pids->trans->tol) { arrived = 1; } //Check if we made it yet
-    }
-
-    return tranError(adjX, adjY, pids->trans, X, Y);
-}
-
-double Turn(api_HANDLES_t * dev, FilterHandles_t * filter, pidHandles_t * pids, double X, double Y) {
-    double tError, rError, hError;
-    double vX, vA;
-    double adjX, adjY;
-    double wallL, wallR;
-    int walls;
-    int arrived = 0;
-
-#ifdef USE_IR_MODE
-    filterIR(dev, filter, &wallR, &wallL);
-#else
-    filterSonar(dev, filter, &wallL, &wallR);
-#endif
-
-    while(!bumped(dev) && !arrived) {
-        //Make sure the path is clear ahead
-        if(checkInFront(dev, filter)) {
-            create_set_speeds(dev->c, 0, 0);
-            #ifdef DEBUG
-            printf("Obstruction detected by IR");
-            #endif
-            while(!bumped(dev) && checkInFront(dev, filter)) {
-                #ifdef DEBUG
-                printf(".");
-                fflush(stdout);
-                #endif
-                usleep(LOOP_SLEEP);  //sleep long enough for the sensors to refresh
-            }
-            #ifdef DEBUG
-            printf("\n");
-            #endif
-        }
-        hError = hall_center_err(wallL,wallR,&walls,pids->sonar);
-        correctOdomErr(hError, WALLS_NONE, X, Y, &adjX, &adjY);
-        tError = tranError(ox, oy, pids->trans, X, Y);
-        rError = targetRotError(ox, oy, oa,pids->angle, X, Y);
-        if(rError > 0.75*PI || rError < -0.75*PI) {
-            //We passed it up, error should be negative
-            tError = -tError;
-            pids->trans->errorHist[pids->trans->iErr] = tError;
-            if(rError < 0) {
-                rError += PI;
-            } else {
-                rError -= PI;
-            }
-            pids->angle->errorHist[pids->angle->iErr] = rError;
-            //printf("Backwards! T: %f  R: %f\n",tError,rError);
-        }
-        if(walls == WALLS_NONE) {
-            //We must rely on the wheel encoders
-            vA = PID(pids->angle)*scaleByCharge(dev,BATT_FACT);
-        } else {
-            //Set angular velocity based on wall data
-            vA = (0.9*PID(pids->angle) + 0.1*PID(pids->sonar))*scaleByCharge(dev,BATT_FACT);
-        }
-        vX = PID(pids->trans);
-        //vA *= angleMultiplier(vX);
-
-        create_set_speeds(dev->c, vX, vA);       //set new velocities
-        #ifdef DEBUG
-        //printf("V: %f A: %f Ch: %f Cap: %f\n", dev->c->voltage, dev->c->current, dev->c->charge, dev->c->capacity);
-        printf("t old: %2.3f %2.3f %2.3f\tnew: %2.3f %2.3f %2.3f\tadj: %2.3f %2.3f\tscale: %2.3f\n", dev->c->ox, dev->c->oy, dev->c->oa, ox, oy, oa, adjX, adjY, scaleByCharge(dev,BATT_FACT));
-        printf("t VX: %2.3f  VA: %2.3f  Te: %2.3f  Re: %2.3f  wallD: %3.3f %3.3f He: %2.3f  walls: %d\n", vX, vA, tError, rError, wallL, wallR, hError, walls);
-        #endif
-
-        usleep(LOOP_SLEEP);  //sleep long enough for the sensors to refresh
-        //create_get_sensors(dev->c, TIMEOUT);     //update odometer sensor data
-        //get new filtered data from sonar
-#ifdef USE_IR_MODE
-        filterIR(dev, filter, &wallR, &wallL);
-#else
-        filterSonar(dev, filter, &wallL, &wallR);
-#endif
-        if(fabs(rError) <= pids->angle->tol) { arrived = 1; } //Check if we made it yet
     }
 
     return tranError(adjX, adjY, pids->trans, X, Y);
